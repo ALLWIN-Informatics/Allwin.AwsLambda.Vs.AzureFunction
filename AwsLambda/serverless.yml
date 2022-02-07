@@ -1,0 +1,118 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: awslambdapoc
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '3'
+configValidationMode: error
+
+custom:
+  subnetIds:
+    - subnet-cd537fa4
+    - subnet-723d823e
+    - subnet-6030581a
+  securityGroupId: sg-04dc387f
+
+
+provider:
+  name: aws
+  runtime: dotnetcore3.1
+  stage: dev
+  region: eu-west-2
+  profile: default-self
+  environment:
+    MongoDbConnectionString: mongodb://adminuser:MasterPassword!@docdbcluster-awspoc.cluster-cyt4mihzemxj.eu-west-2.docdb.amazonaws.com:27017/?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false
+
+package:
+  individually: true
+
+functions:
+  get:
+    handler: AwsLambda::AwsLambda.Functions::Get
+    vpc: 
+      securityGroupIds:
+        - ${self:custom.securityGroupId}
+      subnetIds: ${self:custom.subnetIds}
+
+    # you can add packaging information here
+    package:
+      artifact: bin/Release/netcoreapp3.1/AwsLambda.zip
+    
+    events:
+      - http:
+          path: get
+          method: GET
+          integration: lambda-proxy
+
+  post:
+    handler: AwsLambda::AwsLambda.Functions::Post
+    vpc: 
+      securityGroupIds:
+        - ${self:custom.securityGroupId}
+      subnetIds: ${self:custom.subnetIds}
+
+    # you can add packaging information here
+    package:
+      artifact: bin/Release/netcoreapp3.1/AwsLambda.zip
+    
+    events:
+      - http:
+          path: post
+          method: POST
+          integration: lambda-proxy
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    DocumentDatabaseSubnetGroup:
+      Type: "AWS::DocDB::DBSubnetGroup"
+      Properties:
+        DBSubnetGroupName: ${self:service}-subnet-${self:provider.stage}
+        DBSubnetGroupDescription: "AWS Lambda POC subnet group"
+        SubnetIds: ${self:custom.subnetIds}
+    DocumentDatabaseParameterGroup:
+      Type: "AWS::DocDB::DBClusterParameterGroup"
+      Properties:
+        Name: notls
+        Description: notls
+        Family: docdb4.0
+        Parameters:
+          tls: "disabled"
+    DocumentDatabase:
+      Type: "AWS::DocDB::DBCluster"
+      DeletionPolicy: Delete
+      DependsOn: 
+        - DocumentDatabaseSubnetGroup
+        - DocumentDatabaseParameterGroup
+      Properties:
+        DBClusterIdentifier: docdbcluster-awspoc
+        DBSubnetGroupName: ${self:service}-subnet-${self:provider.stage}
+        MasterUsername: adminuser
+        MasterUserPassword: MasterPassword!
+        DeletionProtection: true
+        DBClusterParameterGroupName: notls
+    DocumentDatabaseInstanceOne:
+      Type: "AWS::DocDB::DBInstance"
+      DependsOn: DocumentDatabase
+      Properties:
+        AutoMinorVersionUpgrade: true
+        AvailabilityZone: "eu-west-2c"
+        DBClusterIdentifier: docdbcluster-awspoc
+        DBInstanceClass: "db.t3.medium"
+        DBInstanceIdentifier: docdbcluster-awspoc-0
+        PreferredMaintenanceWindow: "sat:06:54-sat:07:24"
