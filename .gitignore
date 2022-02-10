@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 .aws-sam/
 .serverless/
+AzureFunction/tmp_build

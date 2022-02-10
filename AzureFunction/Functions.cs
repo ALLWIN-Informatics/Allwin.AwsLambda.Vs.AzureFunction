@@ -32,7 +32,7 @@ namespace AzureFunction
 		        return new BadRequestResult();
 	        }
 
-	        var container = GetContainer();
+	        var container = await GetContainerAsync();
 	        try
 	        {
 		        var res = await container.ReadItemAsync<object>(req.Query["id"], new PartitionKey(req.Query["id"]));
@@ -53,7 +53,7 @@ namespace AzureFunction
 	        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
 	        ILogger log)
         {
-	        var container = GetContainer();
+	        var container = await GetContainerAsync();
 	        using var sr = new StreamReader(req.Body);
 	        var bodyStr = await sr.ReadToEndAsync();
 	        var bodyObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(bodyStr);
@@ -65,16 +65,17 @@ namespace AzureFunction
 	        });
         }
 
-        private static Container GetContainer()
+        private static async Task<Container> GetContainerAsync()
         {
 	        var connString = Environment.GetEnvironmentVariable("CosmosDbConnectionString");
 	        var cosmosClient =
 		        new CosmosClient(
 			        $"AccountEndpoint={connString}");
 
+	        await cosmosClient.CreateDatabaseIfNotExistsAsync("testdatabase");
 	        var db = cosmosClient.GetDatabase("testdatabase");
-	        var container = db.GetContainer("testcollection");
-            return container;
+	        var res = await db.CreateContainerIfNotExistsAsync("testcollection", "/id");
+	        return res.Container;
         }
     }
 }

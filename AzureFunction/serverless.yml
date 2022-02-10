@@ -1,0 +1,54 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: aws-azure-serverless
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '3'
+
+provider:
+  name: azure
+  region: West Europe
+  runtime: dotnet3.1 # dotnet3.1 or dotnet2.2 available
+  #armTemplate:
+   # file: cosmosdb-arm.json
+  environment: # these will be created as application settings
+    CosmosDbConnectionString: 'https://cosmos-cpf4xsliaavpe.documents.azure.com:443/;AccountKey=MEaEkKuKe1enWhnbmPd3kDk9pMzecuOHGDT6AeDM5NsVKZSFpI0XC6XsPu6rTsmP1QbMeNk708ndnkDAIeactw==;'
+
+
+plugins: # look for additional plugins in the community plugins repo: https://github.com/serverless/plugins
+  - serverless-azure-functions
+
+package:
+  exclude:
+  - local.settings.json
+  - cosmosdb-arm.json
+  - package.json
+  - package-lock.json
+  - node_modules/**
+
+functions:
+  get:
+    handler: Get #name of the Function
+    events:
+      - http: true
+        methods:
+          - GET
+
+  post:
+    handler: Post
+    events:
+      - http: true
+        methods:
+          - Post
